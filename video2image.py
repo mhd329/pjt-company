@@ -3,43 +3,23 @@ import sys
 import cv2
 import glob
 
-dirBase = "./data/"
-
 def main(*args):
-    try:
-        os.mkdir(dirBase)
-        print("Base Directory", dirBase, "Created") 
-    except FileExistsError:
-        print("Base Directory", dirBase, "already exists")
+    """
+    터미널에서 쓸 경우 실행 인자로 타겟이 있는 디렉토리와 변환된 이미지가 저장될 디렉토리를 전달해준다.
+    -> python video2image.py C:/data_set/videos/ C:/data_set/images/
+    """
+    target_path = "C:/data_set/videos"
+    result_path = "C:/data_set/images"
+    if len(args) > 1:
+        # target_path = args[1]
+        # result_path = args[2]
+        print(f"long args : {args}")
+    
+    os.makedirs(result_path)
 
-    output = glob.glob("../dataset/pellet_3dp/*.mp4") + glob.glob("../dataset/pellet_3dp/*.MOV")
-
-    for path in output:
-        file_path = os.path.splitext(path)[0]
-        file_name = file_path.split("/")[-1]
-        print(file_path)
-        print(file_name)
-
-        filename = os.path.basename(path)
-        dirName = dirBase +file_name
-        print(filename)
-
-        try:
-            os.mkdir(dirName)
-            print("Directory", dirName, "Created") 
-        except FileExistsError:
-            print("Directory", dirName, "already exists")
-
-        vidcap = cv2.VideoCapture(f"../dataset/pellet_3dp/{filename}")
-        success, image = vidcap.read()
-        count = 0
-
-        while success:
-            cv2.imwrite("%s/%s_%06d.jpg" % (dirName, file_name, count), image)     # save frame as JPEG file
-            success, image = vidcap.read()
-            # print('Read a new frame: ', success)
-            count += 1
-    print("Convert finished.")
+    video_list_mp4 = glob.glob(f"{target_path}/*.mp4")
+    video_list_mov = glob.glob(f"{target_path}/*.MOV")
+    
 
 if __name__ == "__main__":
     main(sys.argv)
