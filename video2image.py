@@ -2,6 +2,7 @@ import os
 import sys
 import cv2
 import glob
+from Video2ImageLogger import v2i_logger
 
 def main(*args):
     """
@@ -12,21 +13,56 @@ def main(*args):
     -> python video2image.py C:/data_set/videos/
     -> os.makedirs(C:/data_set/images/)
     """
-    video_path = r"C:/data_set/videos/"
-    image_path = r"C:/data_set/images/"
+    video_path = r"C:/dataset/videos/"
+    image_path = r"C:/dataset/images/"
     if len(args) > 1:
-        video_path = args[1]
         assert os.path.isdir(args[1]), "파일은 경로로 지정될 수 없습니다."
-        video_path = os.path.split(video_path)
-        image_path = f"{video_path[0]}/images"
-        if not video_path[1]:
-            parent_path = os.path.dirname(video_path[0])
-            image_path = f"{parent_path}/images"
+        video_path = args[1]
+        parent, child = os.path.split(video_path)
+        image_path = fr"{parent}/images/"
+        video_path = fr"{parent}/{child}/"
+        if not child: # 맨 마지막에 슬래시 있는 경우
+            video_path = fr"{parent}/"
+            parent = os.path.dirname(video_path)
+            image_path = fr"{parent}/images/"
     if len(args) > 2:
+        assert os.path.isdir(args[2]), "파일은 경로로 지정될 수 없습니다."
         image_path = args[2]
+        parent, child = os.path.split(image_path)
+        image_path = fr"{parent}/{child}/"
+        if not child: # 맨 마지막에 슬래시 있음
+            image_path = fr"{parent}/"
 
     if not os.path.exists(image_path):
         os.makedirs(image_path)
 
+    # video_list_mp4 = glob.glob(f"{target_path}/*.mp4")
+    # video_list_mov = glob.glob(f"{target_path}/*.MOV")
+    video_list = glob.glob(fr"{video_path}*.*")
+    for video in video_list:
+        total = 0
+        success = 0
+        skip = 0
+        if os.path.isfile(video):
+            _, file = os.path.split(video)
+            file_name, file_ext = file.split(".")
+            cap = cv2.VideoCapture(f"{video_path}{file_name}.{file_ext}")
+            retval, _ = cap.read()
+            if retval:
+                processing_cnt = 0
+                while retval:
+                    retval, frame = cap.read()
+                    cv2.imwrite("%s/%s_%06d.jpg" % (image_path, file_name, processing_cnt), frame)
+                    processing_cnt += 1
+                v2i_logger.info(f"{video} Convert finished, processing count : {processing_cnt}.")
+                success += 1
+            else:
+                skip += 1 # 리턴값 없으면(False 이면 == 재생할 수 없으면) skip
+                v2i_logger.info(f"{video} is skipped, No return value.")
+        else:
+            skip += 1 # 파일이 아니면 skip
+            v2i_logger.info(f"{video} is skipped, {video} is not file.")
+        total += 1
+    v2i_logger.info(f"({success}/{total}) Success : {success}, Skipped : {skip}, Total : {total}")
 if __name__ == "__main__":
     main(sys.argv)
