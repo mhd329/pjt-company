@@ -15,7 +15,11 @@ def main(*args):
     """
     video_path = r"C:/dataset/videos/"
     image_path = r"C:/dataset/images/"
+    v2i_logger.info(args[0])
+    args = args[0]
     if len(args) > 1:
+        v2i_logger.info(f"args[1] (video path) : {args[1]}")
+        assert os.path.exists(video_path), "지정된 경로를 찾을 수 없습니다."
         assert os.path.isdir(args[1]), "파일은 경로로 지정될 수 없습니다."
         video_path = args[1]
         parent, child = os.path.split(video_path)
@@ -26,6 +30,7 @@ def main(*args):
             parent = os.path.dirname(video_path)
             image_path = fr"{parent}/images/"
     if len(args) > 2:
+        v2i_logger.info(f"args[2] (image path) : {args[2]}")
         assert os.path.isdir(args[2]), "파일은 경로로 지정될 수 없습니다."
         image_path = args[2]
         parent, child = os.path.split(image_path)
