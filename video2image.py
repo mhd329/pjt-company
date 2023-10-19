@@ -13,24 +13,32 @@ def main(*args):
     -> python video2image.py C:/data_set/videos/
     -> os.makedirs(C:/data_set/images/)
     """
-    video_path = r"C:/dataset/videos/"
-    image_path = r"C:/dataset/images/"
+    video_path = r"F:/dataset/videos/"
+    image_path = r"F:/dataset/images/"
     v2i_logger.info(args[0])
     args = args[0]
     if len(args) > 1:
         v2i_logger.info(f"args[1] (video path) : {args[1]}")
-        assert os.path.exists(video_path), "지정된 경로를 찾을 수 없습니다."
+        assert os.path.exists(args[1]), "지정된 경로를 찾을 수 없습니다."
         assert os.path.isdir(args[1]), "파일은 경로로 지정될 수 없습니다."
         video_path = args[1]
         parent, child = os.path.split(video_path)
+        # 슬래시 없는 경우
         image_path = fr"{parent}/images/"
         video_path = fr"{parent}/{child}/"
         if not child: # 맨 마지막에 슬래시 있는 경우
             video_path = fr"{parent}/"
-            parent = os.path.dirname(video_path)
+            parent = os.path.dirname(os.path.dirname(video_path))
             image_path = fr"{parent}/images/"
     if len(args) > 2:
         v2i_logger.info(f"args[2] (image path) : {args[2]}")
+        if not os.path.exists(image_path):
+            v2i_logger.info(f"{args[2]} is not found.")
+            answer = input("경로 새로 만들기(y/n) : ")
+            if answer == "y":
+                os.makedirs(image_path)
+                v2i_logger.info(f"{args[2]} is made by user.")
+            assert os.path.exists(args[2]), "지정된 경로를 찾을 수 없습니다."
         assert os.path.isdir(args[2]), "파일은 경로로 지정될 수 없습니다."
         image_path = args[2]
         parent, child = os.path.split(image_path)
@@ -52,13 +60,13 @@ def main(*args):
             _, file = os.path.split(video)
             file_name, file_ext = file.split(".")
             cap = cv2.VideoCapture(f"{video_path}{file_name}.{file_ext}")
-            retval, _ = cap.read()
+            retval, frame = cap.read()
             if retval:
                 processing_cnt = 0
                 while retval:
-                    retval, frame = cap.read()
-                    cv2.imwrite("%s/%s_%06d.jpg" % (image_path, file_name, processing_cnt), frame)
+                    cv2.imwrite("%s/%s %06d.jpg" % (image_path, file_name, processing_cnt), frame)
                     processing_cnt += 1
+                    retval, frame = cap.read()
                 v2i_logger.info(f"{video} Convert finished, processing count : {processing_cnt}.")
                 success += 1
             else:

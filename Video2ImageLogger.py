@@ -32,6 +32,6 @@ critical_stream_handler.setLevel(logging.CRITICAL) # 크리티컬만 수집
 
 # 로거에 부착
 v2i_logger.addHandler(file_handler)
-v2i_logger.addHandler(stream_handler)
+# v2i_logger.addHandler(stream_handler)
 v2i_logger.addHandler(critical_file_handler)
-v2i_logger.addHandler(critical_stream_handler)
+# v2i_logger.addHandler(critical_stream_handler)
