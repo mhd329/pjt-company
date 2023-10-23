@@ -24,6 +24,7 @@ def main(*args):
         video_path = args[1]
         parent, child = os.path.split(video_path)
         # 슬래시 없는 경우
+        # endswith 써서 슬래시 끝나는 여부 파악하는 걸로 바꾸기
         image_path = fr"{parent}/images/"
         video_path = fr"{parent}/{child}/"
         if not child: # 맨 마지막에 슬래시 있는 경우
@@ -72,6 +73,7 @@ def main(*args):
             else:
                 skip += 1 # 리턴값 없으면(False 이면 == 재생할 수 없으면) skip
                 v2i_logger.info(f"{video} is skipped, No return value.")
+            cap.release() # 비디오 자원 해제
         else:
             skip += 1 # 파일이 아니면 skip
             v2i_logger.info(f"{video} is skipped, {video} is not file.")
