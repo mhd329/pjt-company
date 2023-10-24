@@ -1,8 +1,7 @@
-from CamClass import WaisCam
-from CamClass import WaisCam
-from CamLogger import wais_logger
+from CamClass import Cam
+from CamLogger import cam_logger
 
 __all__ = [
-    "WaisCam",
-    "wais_logger",
+    "Cam",
+    "cam_logger",
     ]

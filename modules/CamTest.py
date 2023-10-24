@@ -36,7 +36,7 @@ def multi_process(method: str):
 	# 	cam = initialize_cam(process_number)
 	# 	cam.run(method)
 
-	with ProcessPoolExecutor(max_workers=2) as excutor:
+	with ProcessPoolExecutor(max_workers=4) as excutor:
 		# ProcessPoolExecutor 일때는 __main__이 아닌 key press 감지시 destroyAllWindows를 해야함
 		excutor.map(run_multiprocess, (0, 1))
 		# cv2.destroyAllWindows()

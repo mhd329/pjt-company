@@ -12,15 +12,17 @@ from time import time
 from CamLogger import cam_logger
 from CamInit import initialize_cam
 
-def run(cam, method, operation_cnt, interval_sec60, sec60_total_frame, prev):
+# 어노테이션
+from CamClass import Cam
+
+def run(cam: Cam, method, operation_cnt, interval_sec60, sec60_total_frame, prev):
 	retval, frame = cam.cap.read()
-	if not retval:
-		cam_logger.info("not retval")
-		# 15초 이상 retval 없을때 종료하는 로직 만들어야함
-		# cam.cap.release()
-		# if method == "mp":
-		# 	destroyAllWindows()
-		# return
+	if not retval: # 비디오 송출값 없음
+		cam_logger.info("No return value")
+		cam.cap.release()
+		if method == "mp":
+			destroyAllWindows()
+		return
 	operation_cnt += 1
 	cur = time()
 	fps = 1 / (cur - prev)
