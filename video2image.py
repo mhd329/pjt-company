@@ -23,8 +23,7 @@ def main(*args):
         assert os.path.isdir(args[1]), "파일은 경로로 지정될 수 없습니다."
         video_path = args[1]
         parent, child = os.path.split(video_path)
-        # 슬래시 없는 경우
-        # endswith 써서 슬래시 끝나는 여부 파악하는 걸로 바꾸기
+        # 슬래시 없는 경우 (endswith 쓰고 싶었는데 경로가 역슬래시로 표현될 수도 있어서 유지함.)
         image_path = fr"{parent}/images/"
         video_path = fr"{parent}/{child}/"
         if not child: # 맨 마지막에 슬래시 있는 경우
