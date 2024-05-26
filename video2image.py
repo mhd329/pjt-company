@@ -59,7 +59,7 @@ def main(*args):
         if os.path.isfile(video):
             _, file = os.path.split(video)
             file_name, file_ext = file.split(".")
-            cap = cv2.VideoCapture(f"{video_path}{file_name}.{file_ext}")
+            cap = cv2.VideoCapture(f"{video_path}{file_name}/{file_name}.{file_ext}")
             retval, frame = cap.read()
             if retval:
                 processing_cnt = 0
