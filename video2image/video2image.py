@@ -52,10 +52,10 @@ def main(*args):
     # video_list_mp4 = glob.glob(f"{target_path}/*.mp4")
     # video_list_mov = glob.glob(f"{target_path}/*.MOV")
     video_list = glob.glob(fr"{video_path}*.*")
+    total = 0
+    success = 0
+    skip = 0
     for video in video_list:
-        total = 0
-        success = 0
-        skip = 0
         if os.path.isfile(video):
             _, file = os.path.split(video)
             file_name, file_ext = file.split(".")
