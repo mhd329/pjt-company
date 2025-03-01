@@ -1,8 +1,8 @@
 import cv2
 import time
 import numpy
-import threading
 from .frame_type import FrameType
+from settings import THREAD_EXECUTOR
 from logger import video_logger as logger, log_click, log_while
 
 
@@ -28,7 +28,7 @@ class VideoStream:
         logger.info(f"VideoStream initialize start")
         self.click_cnt = 0 # 마우스 클릭 횟수
         self.running = False # 초기 가동 상태
-        self.thread = None # read, run 분리
+        self.future = None # read, run 분리된 쓰레드의 작업 추적
         self.frame = {
             FrameType.NORMAL : None,
             FrameType.GRAY : None,
@@ -131,32 +131,36 @@ class VideoStream:
             frame: cv2.typing.MatLike = self.frame[self.click_cnt % 3]
             key = cv2.waitKey(self.operation_speed_limit) & 0xFF
             if key == 27: # 연결 종료 (ESC)
-                if self.thread:
-                    self.running = False
-                    self.thread.join() # 쓰레드 중지 대기
-                    self.thread = None
+                if self.future is not None:
+                    self.running = False # 루프 중단 시그널
+                    self.future.result() # 쓰레드 완료처리 (블로킹)
+                    self.future = None
+                    self.frame[FrameType.NORMAL] = None
+                    self.frame[FrameType.GRAY] = None
+                    self.frame[FrameType.EDGE] = None
+                    frame = None
                 self.__disconnect()
                 break
-            if key == 113: # 프레임 갱신 루프 중지 (q)
-                if self.thread:
-                    self.running = False
-                    self.thread.join() # 쓰레드 중지 대기
-                    self.thread = None
-                self.frame[FrameType.NORMAL] = None
-                self.frame[FrameType.GRAY] = None
-                self.frame[FrameType.EDGE] = None
-                logger.info(f"CAM {self.cam_id} frame update loop stopped")
+            if key == 113: # 프레임 갱신 루프 중단 (q)
+                if self.future is not None:
+                    self.running = False # 루프 중단 시그널
+                    self.future.result() # 쓰레드 완료처리 (블로킹)
+                    self.future = None
+                    self.frame[FrameType.NORMAL] = None
+                    self.frame[FrameType.GRAY] = None
+                    self.frame[FrameType.EDGE] = None
+                    frame = None
+                    logger.info(f"CAM {self.cam_id} frame update loop stopped")
             if key == 115: # 프레임 갱신 루프 시작 (s)
-                if not self.thread:
+                if self.future is None:
                     self.running = True
-                    self.thread = threading.Thread(target=self.__update, daemon=True) # 프레임 생성 쓰레드
-                    self.thread.start() # 쓰레드 시작
+                    self.future = THREAD_EXECUTOR.submit(self.__update) # 프레임 생성 쓰레드
                     logger.info(f"CAM {self.cam_id} frame update loop started")
             show_fps = self.real_fps
-            if frame is not None:
-                display_frame = frame.copy()
-            else:
+            if frame is None:
                 display_frame = dummy.copy()
                 show_fps = 0.0
+            else:
+                display_frame = frame.copy()
             cv2.putText(display_frame, f"{show_fps}", (30, 30), cv2.FONT_ITALIC, 1, (0, 255, 0), 2)
             cv2.imshow(f"CAM {self.cam_id}", display_frame)
