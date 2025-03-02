@@ -1,6 +1,5 @@
 # Project list
 
-- wais modules prototype
-  - streaming
-  - vid2img
-  - ranker (lost)
+- web streaming
+- vid2img
+- ranker (lost)
