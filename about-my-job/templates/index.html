@@ -17,7 +17,7 @@
       <div class="col-6">
         <div class="mt-3">
           <h3 class="title">Camera {{ i }}</h3>
-          <img src="{{ url_for('multi_thread_web', cam_id=i) }}" alt="Camera {{ i }}">
+          <img src="{{ url_for('web_player', cam_id=i) }}" alt="Camera {{ i }}">
         </div>
       </div>
       {% endfor %}

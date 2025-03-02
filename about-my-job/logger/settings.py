@@ -1,7 +1,6 @@
 import os
 import cv2
 import logging
-from camera import FrameType
 from datetime import datetime
 
 
@@ -29,7 +28,7 @@ if not os.path.exists(f"{log_path}"):
 if not os.path.exists(f"{log_path}/{now}_cam_events.log"):
     with open(f"{log_path}/{now}_cam_events.log", 'w', ) as f:
         pass
-    
+
 
 if not os.path.exists(f"{log_path}/{now}_cam_critical_events.log"):
     with open(f"{log_path}/{now}_cam_critical_events.log", 'w', ) as f:
@@ -63,6 +62,7 @@ video_logger.addHandler(critical_stream_handler)
 
 # 클릭시 로그
 def log_click(cam_id: int, click_cnt: int) -> None:
+    from camera.frame_type import FrameType
     # logger.info(f"CAM {cam_id} clicked")
     video_logger.info(f"CAM {cam_id} frame type = {FrameType.get_name(click_cnt % 3)}") # 0, 1, 2 순서로 출력, 3으로 나눈 나머지, 0:일반, 1:그레이, 2:엣지
 

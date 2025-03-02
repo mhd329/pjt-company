@@ -1,9 +1,13 @@
 import cv2
 import time
-import numpy
+import numpy as np
 from .frame_type import FrameType
-from settings import THREAD_EXECUTOR
-from logger import video_logger as logger, log_click, log_while
+from multiprocessing import shared_memory
+from concurrent.futures import ThreadPoolExecutor
+from logger import video_logger as logger, log_click, log_while # 유일한 서버측 파일
+
+
+THREAD_EXECUTOR = ThreadPoolExecutor(max_workers=2)
 
 
 class VideoStream:
@@ -12,19 +16,30 @@ class VideoStream:
     """
     operation_speed_limit = 16 # ms
     fps_dot = 2 # 소수점 자리수, 2이면 0.01까지 표현
+    height = 480
+    width = 640
+    
+    # 공유메모리 참조용 배열
+    ref_array = np.zeros((height, width, 3), dtype=np.uint8) # 일반
 
     @classmethod
-    def set_frame(cls, operation_speed_limit, fps_dot):
+    def set_frame(cls, operation_speed_limit: int = 16, fps_dot: int = 2, height: int = 480, width: int = 640) -> None:
         """
         :param operation_speed_limit: 프레임 읽기 속도제한 -> 기본값 16 (약 60fps)
         :param fps_dot: fps 계산 소수점 자리수 -> 기본값 2
+        :param height: 프레임 높이 -> 기본값 480
+        :param width: 프레임 너비 -> 기본값 640
         """
-        assert fps_dot >= 0
-        assert operation_speed_limit >= 1
+        assert operation_speed_limit >= 1, "Wait time must be greater than 1"
+        assert fps_dot >= 0, "Decimal point must be greater than 0"
+        assert height >= 480, "Minimum height is 480"
+        assert width >= 640, "Minimum width is 640"
         cls.operation_speed_limit = operation_speed_limit
         cls.fps_dot = fps_dot # 소수점 자리수, 2이면 0.01까지 표현
+        cls.height = height
+        cls.width = width
 
-    def __init__(self):
+    def __init__(self) -> None:
         logger.info(f"VideoStream initialize start")
         self.click_cnt = 0 # 마우스 클릭 횟수
         self.running = False # 초기 가동 상태
@@ -47,17 +62,19 @@ class VideoStream:
         self.__set_resolution() # 해상도 설정
         self.__open_window() # 창 열기
         logger.info(f"FPS = {self.cap.get(cv2.CAP_PROP_FPS)}")
+        # 공유메모리 연결
+        self.stream_shm = shared_memory.SharedMemory(name=f"shm_{self.cam_id}", create=True, size=self.ref_array.nbytes)
         logger.info(f"CAM {self.cam_id} connected")
         return True
 
     def __disconnect(self) -> None: # 카메라 연결 해제
         self.__close_window() # 창 닫기
+        self.stream_shm.unlink() # 공유메모리 연결 해제
+        self.stream_shm.close()
         self.cap.release()
         logger.info(f"CAM {self.cam_id} disconnected")
 
-    def __set_resolution(self, width: int = 640, height: int = 480) -> None: # 해상도 설정
-        self.width = width
-        self.height = height
+    def __set_resolution(self) -> None: # 해상도 설정
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
         logger.info(f"resolution = {self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)} x {self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)}")
@@ -95,7 +112,7 @@ class VideoStream:
         while self.running:
             start_time = time.time()
             success, frame = self.cap.read()
-            comparison: numpy.ndarray = (frame == last_frame)
+            comparison: np.ndarray = (frame == last_frame)
             if (not success) or (last_frame is not None and comparison.all()):
                 time.sleep(0.01)
                 continue
@@ -103,17 +120,30 @@ class VideoStream:
             last_frame = frame  # 새로운 프레임 저장
             # 다른 프레임은 None으로 초기화하여 메모리 절약
             if self.click_cnt % 3 == 0: # 일반 화면
+                shared_frame = frame
                 self.frame[FrameType.NORMAL] = frame
                 self.frame[FrameType.GRAY] = None
                 self.frame[FrameType.EDGE] = None
             elif self.click_cnt % 3 == 1: # 흑백 화면
+                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                shared_frame = gray
                 self.frame[FrameType.NORMAL] = None
-                self.frame[FrameType.GRAY] = frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                self.frame[FrameType.GRAY] = gray
                 self.frame[FrameType.EDGE] = None
             elif self.click_cnt % 3 == 2: # 윤곽선 화면
+                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                edge = cv2.Canny(gray, 100, 200)
+                shared_frame = edge
                 self.frame[FrameType.NORMAL] = None
                 self.frame[FrameType.GRAY] = None
-                self.frame[FrameType.EDGE] = cv2.Canny(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY), 100, 200)
+                self.frame[FrameType.EDGE] = edge
+            # stream = np.ndarray(shared_frame.shape, dtype=shared_frame.dtype, buffer=self.stream_shm.buf)
+            stream = np.ndarray((480, 640, 3), dtype=np.uint8, buffer=self.stream_shm.buf)
+            if shared_frame.ndim == 2:
+                stream[:, :, 0] = shared_frame # R채널에만 저장하고 나머지는 받는쪽에서 해석할거임
+                stream[:, :, 1:] = 0
+            else:
+                stream[:] = shared_frame
             fps = 1 / (time.time() - start_time)
             fps: float = (fps * (10 ** self.fps_dot) // 1 / (10 ** self.fps_dot))
             fps_sum += fps
@@ -127,6 +157,7 @@ class VideoStream:
     def show(self) -> None:
         show_fps = 0.0
         dummy = cv2.imread("static/images/no-return-value.png")
+        stream = np.ndarray((480, 640, 3), dtype=np.uint8, buffer=self.stream_shm.buf)
         while True:
             frame: cv2.typing.MatLike = self.frame[self.click_cnt % 3]
             key = cv2.waitKey(self.operation_speed_limit) & 0xFF
@@ -139,6 +170,7 @@ class VideoStream:
                     self.frame[FrameType.GRAY] = None
                     self.frame[FrameType.EDGE] = None
                     frame = None
+                stream[:] = dummy
                 self.__disconnect()
                 break
             if key == 113: # 프레임 갱신 루프 중단 (q)
@@ -150,6 +182,7 @@ class VideoStream:
                     self.frame[FrameType.GRAY] = None
                     self.frame[FrameType.EDGE] = None
                     frame = None
+                    stream[:] = dummy
                     logger.info(f"CAM {self.cam_id} frame update loop stopped")
             if key == 115: # 프레임 갱신 루프 시작 (s)
                 if self.future is None:
