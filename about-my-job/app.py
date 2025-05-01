@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 
 
+from waitress import serve
 from typing import Generator
 from multiprocessing import shared_memory
 from flask import Flask, render_template, Response
@@ -57,4 +58,5 @@ def web_player(cam_id: int) -> Response:
 
 
 if __name__ == "__main__":
-    app.run(port=8080, debug=DEBUG) # 내부 run 코드를 보니 threaded 옵션이 기본으로 되어 있음.
+    serve(app, host="127.0.0.1", port=8080, threads=16) # Waitress는 기본적으로 threaded=True
+    # app.run(port=8080, debug=DEBUG) # 내부 run 코드를 보니 threaded 옵션이 기본으로 되어 있음.

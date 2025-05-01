@@ -1,10 +1,10 @@
-# import os
+import os
 import sys
 
 
-# current_dir = os.path.dirname(os.path.abspath(__file__)) # 현재 파일의 디렉토리
-# root_dir = os.path.dirname(current_dir) # 루트 디렉토리 (상위 디렉토리)
-# sys.path.append(root_dir) # 루트 디렉토리를 sys.path에 추가
+current_dir = os.path.dirname(os.path.abspath(__file__)) # 현재 파일의 디렉토리
+root_dir = os.path.dirname(current_dir) # 루트 디렉토리 (상위 디렉토리)
+sys.path.append(root_dir) # 루트 디렉토리를 sys.path에 추가
 
 
 import cv2
